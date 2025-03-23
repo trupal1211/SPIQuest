@@ -16,6 +16,6 @@ public class SemesterDataService {
 
     public List<SemesterData> getSemesterData(int b_id)
     {
-        return semesterDataRepository.findByBranchId(b_id);
+        return semesterDataRepository.findByBranch_BranchId(b_id);
     }
 }

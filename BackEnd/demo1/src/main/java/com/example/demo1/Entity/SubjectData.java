@@ -14,10 +14,10 @@ public class SubjectData {
     private String subjectName;
     private float subjectCredit;
     private int totalMarks ;
-    private int termWorkMark ;
-    private int sessionalMark ;
-    private int externalMark ;
-    private float attendance ;
+    private Integer termWorkMark ;
+    private Integer sessionalMark ;
+    private Integer externalMark ;
+    private Integer attendance ;
 
     @ManyToMany(mappedBy = "subjectData")
     private List<SemesterData> semesterData ;
@@ -54,35 +54,35 @@ public class SubjectData {
         this.totalMarks = totalMarks;
     }
 
-    public int getTermWorkMark() {
+    public Integer getTermWorkMark() {
         return termWorkMark;
     }
 
-    public void setTermWorkMark(int termWorkMark) {
+    public void setTermWorkMark(Integer termWorkMark) {
         this.termWorkMark = termWorkMark;
     }
 
-    public int getSessionalMark() {
+    public Integer getSessionalMark() {
         return sessionalMark;
     }
 
-    public void setSessionalMark(int sessionalMark) {
+    public void setSessionalMark(Integer sessionalMark) {
         this.sessionalMark = sessionalMark;
     }
 
-    public int getExternalMark() {
+    public Integer getExternalMark() {
         return externalMark;
     }
 
-    public void setExternalMark(int externalMark) {
+    public void setExternalMark(Integer externalMark) {
         this.externalMark = externalMark;
     }
 
-    public float getAttendance() {
+    public Integer getAttendance() {
         return attendance;
     }
 
-    public void setAttendance(float attendance) {
+    public void setAttendance(Integer attendance) {
         this.attendance = attendance;
     }
 
@@ -93,7 +93,5 @@ public class SubjectData {
     public void setSemesterData(List<SemesterData> semesterData) {
         this.semesterData = semesterData;
     }
-
-    
 
 }
