@@ -1,5 +1,7 @@
+"use client"
+
 import { useState, useEffect } from "react"
-import { FaEdit, FaTrash, FaChevronDown, FaChevronUp } from "react-icons/fa"
+import { FaEdit, FaTrash, FaChevronDown, FaChevronUp, FaArrowLeft } from "react-icons/fa"
 import { showToast } from "./toast"
 
 export default function SpiCalculator() {
@@ -7,19 +9,11 @@ export default function SpiCalculator() {
   const [selectedBranch, setSelectedBranch] = useState(null)
   const [selectedSemester, setSelectedSemester] = useState(null)
   const [subjects, setSubjects] = useState([])
-  const [availableSubjects, setAvailableSubjects] = useState([])
-  const [selectedSubject, setSelectedSubject] = useState(null)
-
-  const [sessionalMarks, setSessionalMarks] = useState("")
-  const [attendanceMarks, setAttendanceMarks] = useState("")
-  const [termworkMarks, setTermworkMarks] = useState("")
-  const [externalMarks, setExternalMarks] = useState("")
-
+  const [subjectMarks, setSubjectMarks] = useState({})
   const [courseResults, setCourseResults] = useState([])
   const [spi, setSpi] = useState(null)
-  const [showInputCard, setShowInputCard] = useState(false)
   const [editMode, setEditMode] = useState(false)
-  const [editingResultId, setEditingResultId] = useState(null)
+  const [editingSubjectCode, setEditingSubjectCode] = useState(null)
   const [showDetails, setShowDetails] = useState(false)
   const [loading, setLoading] = useState(false)
   const [semesters, setSemesters] = useState([])
@@ -34,7 +28,6 @@ export default function SpiCalculator() {
           throw new Error("Failed to fetch branches")
         }
         const data = await response.json()
-        console.log(data)
         setBranches(data)
       } catch (error) {
         showToast(error.message, "error")
@@ -77,8 +70,7 @@ export default function SpiCalculator() {
 
     setSelectedSemester(null)
     setSubjects([])
-    setAvailableSubjects([])
-    setSelectedSubject(null)
+    setSubjectMarks({})
     setCourseResults([])
     setSpi(null)
   }
@@ -89,7 +81,7 @@ export default function SpiCalculator() {
     if (!semNo) {
       setSelectedSemester(null)
       setSubjects([])
-      setAvailableSubjects([])
+      setSubjectMarks({})
       return
     }
 
@@ -120,60 +112,39 @@ export default function SpiCalculator() {
         }))
 
         setSubjects(formattedSubjects)
-        setAvailableSubjects(formattedSubjects)
+
+        // Initialize subject marks
+        const initialMarks = {}
+        formattedSubjects.forEach((subject) => {
+          initialMarks[subject.subjectCode] = {
+            sessionalMarks: "",
+            attendanceMarks: "",
+            termworkMarks: "",
+            externalMarks: "",
+          }
+        })
+        setSubjectMarks(initialMarks)
+
+        // Clear any previous results
+        setCourseResults([])
+        setSpi(null)
       } catch (error) {
         showToast(error.message, "error")
       } finally {
         setLoading(false)
       }
     }
-
-    setSelectedSubject(null)
-    setCourseResults([])
-    setSpi(null)
   }
 
-  // Update available subjects when courseResults change
-  useEffect(() => {
-    if (subjects.length > 0) {
-      const addedSubjectCodes = courseResults.map((result) => result.subjectCode)
-      const filteredSubjects = subjects.filter(
-        (subject) =>
-          !addedSubjectCodes.includes(subject.subjectCode) ||
-          (editMode && selectedSubject && subject.subjectCode === selectedSubject.subjectCode),
-      )
-      setAvailableSubjects(filteredSubjects)
-    }
-  }, [courseResults, subjects, editMode, selectedSubject])
-
-  // Handle subject selection
-  const handleSubjectChange = (e) => {
-    const subjectCode = e.target.value
-    const subject = subjects.find((s) => s.subjectCode === subjectCode) || null
-    setSelectedSubject(subject)
-
-    // If in edit mode, pre-fill the form with existing data
-    if (editMode && editingResultId) {
-      const resultToEdit = courseResults.find((result) => result.id === editingResultId)
-      if (resultToEdit && resultToEdit.subjectCode === subjectCode) {
-        setSessionalMarks(resultToEdit.sessionalMarks)
-        setAttendanceMarks(resultToEdit.attendanceMarks)
-        setTermworkMarks(resultToEdit.termworkMarks)
-        setExternalMarks(resultToEdit.externalMarks)
-      } else {
-        resetForm()
-      }
-    } else {
-      resetForm()
-    }
-  }
-
-  // Reset form fields
-  const resetForm = () => {
-    setSessionalMarks("")
-    setAttendanceMarks("")
-    setTermworkMarks("")
-    setExternalMarks("")
+  // Handle input change for subject marks
+  const handleMarksChange = (subjectCode, field, value) => {
+    setSubjectMarks((prev) => ({
+      ...prev,
+      [subjectCode]: {
+        ...prev[subjectCode],
+        [field]: value,
+      },
+    }))
   }
 
   // Calculate grade and points based on percentage
@@ -239,169 +210,138 @@ export default function SpiCalculator() {
     return { points, grade }
   }
 
-  // Add or update subject result
-  const addOrUpdateSubjectResult = () => {
-    if (!selectedSubject) {
-      showToast("Please select a subject", "warning")
-      return
-    }
+  // Validate marks for a subject
+  const validateSubjectMarks = (subject, marks) => {
+    const { total_sessionalMarks, total_termworkMarks, total_externamMarks } = subject
+
+    const { sessionalMarks, attendanceMarks, termworkMarks, externalMarks } = marks
 
     // Validate inputs based on what components are available
-    if (selectedSubject.total_sessionalMarks > 0 && (sessionalMarks === "" || attendanceMarks === "")) {
-      showToast("Please enter sessional and attendance marks", "warning")
-      return
-    }
+    if (total_sessionalMarks > 0) {
+      if (sessionalMarks === "" || attendanceMarks === "") {
+        return { valid: false, message: `Please enter sessional and attendance marks for ${subject.subjectName}` }
+      }
 
-    if (selectedSubject.total_termworkMarks > 0 && termworkMarks === "") {
-      showToast("Please enter termwork marks", "warning")
-      return
-    }
+      const sessional = Number(sessionalMarks)
+      const attendance = Number(attendanceMarks)
 
-    if (selectedSubject.total_externamMarks > 0 && externalMarks === "") {
-      showToast("Please enter external marks", "warning")
-      return
-    }
-
-    // Convert inputs to numbers
-    const sessional = selectedSubject.total_sessionalMarks > 0 ? Number(sessionalMarks) : 0
-    const attendance = selectedSubject.total_sessionalMarks > 0 ? Number(attendanceMarks) : 0
-    const termwork = selectedSubject.total_termworkMarks > 0 ? Number(termworkMarks) : 0
-    const external = selectedSubject.total_externamMarks > 0 ? Number(externalMarks) : 0
-
-    // Validate marks
-    if (selectedSubject.total_sessionalMarks > 0) {
-      if (sessional > selectedSubject.total_sessionalMarks - 4) {
-        // Assuming 4 is max for attendance
-        showToast(`Sessional marks cannot exceed ${selectedSubject.total_sessionalMarks - 4}`, "error")
-        return
+      if (sessional > total_sessionalMarks - 4) {
+        return {
+          valid: false,
+          message: `Sessional marks cannot exceed ${total_sessionalMarks - 4} for ${subject.subjectName}`,
+        }
       }
 
       if (attendance > 4) {
-        showToast("Attendance marks cannot exceed 4", "error")
-        return
+        return { valid: false, message: `Attendance marks cannot exceed 4 for ${subject.subjectName}` }
       }
     }
 
-    if (selectedSubject.total_termworkMarks > 0 && termwork > selectedSubject.total_termworkMarks) {
-      showToast(`Termwork marks cannot exceed ${selectedSubject.total_termworkMarks}`, "error")
-      return
-    }
+    if (total_termworkMarks > 0) {
+      if (termworkMarks === "") {
+        return { valid: false, message: `Please enter termwork marks for ${subject.subjectName}` }
+      }
 
-    if (selectedSubject.total_externamMarks > 0 && external > selectedSubject.total_externamMarks) {
-      showToast(`External marks cannot exceed ${selectedSubject.total_externamMarks}`, "error")
-      return
-    }
+      const termwork = Number(termworkMarks)
 
-    // Calculate total marks
-    const totalObtained = sessional + attendance + termwork + external
-    const totalPossible =
-      selectedSubject.total_sessionalMarks + selectedSubject.total_termworkMarks + selectedSubject.total_externamMarks
-
-    // Calculate percentage
-    const percentage = (totalObtained * 100) / totalPossible
-
-    // Calculate grade and points
-    const { grade, points } = calculateGradeAndPoints(
-      percentage,
-      sessional,
-      termwork,
-      external,
-      selectedSubject.total_sessionalMarks,
-      selectedSubject.total_termworkMarks,
-      selectedSubject.total_externamMarks,
-    )
-
-    // Check if subject already exists (for non-edit mode)
-    if (!editMode) {
-      const existingSubject = courseResults.find((cr) => cr.subjectCode === selectedSubject.subjectCode)
-      if (existingSubject) {
-        showToast("Subject already added", "warning")
-        return
+      if (termwork > total_termworkMarks) {
+        return {
+          valid: false,
+          message: `Termwork marks cannot exceed ${total_termworkMarks} for ${subject.subjectName}`,
+        }
       }
     }
 
-    // Create new course result
-    const newCourseResult = {
-      id: editMode ? editingResultId : Date.now(),
-      subjectCode: selectedSubject.subjectCode,
-      subjectName: selectedSubject.subjectName,
-      credit: selectedSubject.subjectCredit,
-      sessionalMarks: sessional,
-      attendanceMarks: attendance,
-      termworkMarks: termwork,
-      externalMarks: external,
-      total_sessionalMarks: selectedSubject.total_sessionalMarks,
-      total_termworkMarks: selectedSubject.total_termworkMarks,
-      total_externamMarks: selectedSubject.total_externamMarks,
-      totalMarks: totalPossible,
-      totalObtained: totalObtained,
-      percentage: percentage,
-      grade: grade,
-      points: points,
+    if (total_externamMarks > 0) {
+      if (externalMarks === "") {
+        return { valid: false, message: `Please enter external marks for ${subject.subjectName}` }
+      }
+
+      const external = Number(externalMarks)
+
+      if (external > total_externamMarks) {
+        return {
+          valid: false,
+          message: `External marks cannot exceed ${total_externamMarks} for ${subject.subjectName}`,
+        }
+      }
     }
 
-    // Add to or update results
-    let updatedResults
-    if (editMode) {
-      updatedResults = courseResults.map((result) => (result.id === editingResultId ? newCourseResult : result))
-      showToast("Subject updated successfully", "success")
-    } else {
-      updatedResults = [...courseResults, newCourseResult]
-      showToast("Subject added successfully", "success")
+    return { valid: true }
+  }
+
+  // Calculate SPI for all subjects
+  const calculateAllSPI = () => {
+    const results = []
+    let hasErrors = false
+
+    // Validate and process each subject
+    for (const subject of subjects) {
+      const marks = subjectMarks[subject.subjectCode]
+
+      // Validate marks
+      const validation = validateSubjectMarks(subject, marks)
+      if (!validation.valid) {
+        showToast(validation.message, "warning")
+        hasErrors = true
+        break
+      }
+
+      // Convert inputs to numbers
+      const sessional = subject.total_sessionalMarks > 0 ? Number(marks.sessionalMarks) : 0
+      const attendance = subject.total_sessionalMarks > 0 ? Number(marks.attendanceMarks) : 0
+      const termwork = subject.total_termworkMarks > 0 ? Number(marks.termworkMarks) : 0
+      const external = subject.total_externamMarks > 0 ? Number(marks.externalMarks) : 0
+
+      // Calculate total marks
+      const totalObtained = sessional + attendance + termwork + external
+      const totalPossible = subject.total_sessionalMarks + subject.total_termworkMarks + subject.total_externamMarks
+
+      // Calculate percentage
+      const percentage = (totalObtained * 100) / totalPossible
+
+      // Calculate grade and points
+      const { grade, points } = calculateGradeAndPoints(
+        percentage,
+        sessional,
+        termwork,
+        external,
+        subject.total_sessionalMarks,
+        subject.total_termworkMarks,
+        subject.total_externamMarks,
+      )
+
+      // Create result object
+      const result = {
+        id: Date.now() + Math.random(), // Unique ID
+        subjectCode: subject.subjectCode,
+        subjectName: subject.subjectName,
+        credit: subject.subjectCredit,
+        sessionalMarks: sessional,
+        attendanceMarks: attendance,
+        termworkMarks: termwork,
+        externalMarks: external,
+        total_sessionalMarks: subject.total_sessionalMarks,
+        total_termworkMarks: subject.total_termworkMarks,
+        total_externamMarks: subject.total_externamMarks,
+        totalMarks: totalPossible,
+        totalObtained: totalObtained,
+        percentage: percentage,
+        grade: grade,
+        points: points,
+      }
+
+      results.push(result)
     }
 
-    setCourseResults(updatedResults)
+    if (hasErrors) {
+      return
+    }
+
+    // Set course results
+    setCourseResults(results)
 
     // Calculate SPI
-    calculateSpi(updatedResults)
-
-    // Reset form and edit mode
-    setSelectedSubject(null)
-    resetForm()
-    setShowInputCard(false)
-    setEditMode(false)
-    setEditingResultId(null)
-  }
-
-  // Edit a subject result
-  const editSubjectResult = (id) => {
-    const resultToEdit = courseResults.find((result) => result.id === id)
-    if (resultToEdit) {
-      setEditMode(true)
-      setEditingResultId(id)
-      setShowInputCard(true)
-
-      // Find and set the subject
-      const subject = subjects.find((s) => s.subjectCode === resultToEdit.subjectCode)
-      setSelectedSubject(subject)
-
-      // Set form values
-      setSessionalMarks(resultToEdit.sessionalMarks)
-      setAttendanceMarks(resultToEdit.attendanceMarks)
-      setTermworkMarks(resultToEdit.termworkMarks)
-      setExternalMarks(resultToEdit.externalMarks)
-    }
-  }
-
-  // Delete a subject result
-  const deleteSubjectResult = (id) => {
-    if (confirm("Are you sure you want to delete this subject?")) {
-      const updatedResults = courseResults.filter((result) => result.id !== id)
-      setCourseResults(updatedResults)
-
-      // Recalculate SPI
-      if (updatedResults.length > 0) {
-        calculateSpi(updatedResults)
-      } else {
-        setSpi(null)
-      }
-
-      showToast("Subject deleted successfully", "info")
-    }
-  }
-
-  // Calculate SPI
-  const calculateSpi = (results) => {
     let totalCreditPoints = 0
     let totalCredits = 0
 
@@ -412,6 +352,140 @@ export default function SpiCalculator() {
 
     const calculatedSpi = totalCredits > 0 ? totalCreditPoints / totalCredits : 0
     setSpi(calculatedSpi)
+
+    showToast("SPI calculated successfully!", "success")
+  }
+
+  // Edit a subject result
+  const editSubjectResult = (subjectCode) => {
+    setEditMode(true)
+    setEditingSubjectCode(subjectCode)
+
+    // Pre-fill the form with existing data
+    const resultToEdit = courseResults.find((result) => result.subjectCode === subjectCode)
+    if (resultToEdit) {
+      setSubjectMarks((prev) => ({
+        ...prev,
+        [subjectCode]: {
+          sessionalMarks: resultToEdit.sessionalMarks,
+          attendanceMarks: resultToEdit.attendanceMarks,
+          termworkMarks: resultToEdit.termworkMarks,
+          externalMarks: resultToEdit.externalMarks,
+        },
+      }))
+    }
+  }
+
+  // Update a subject after editing
+  const updateSubject = () => {
+    const subject = subjects.find((s) => s.subjectCode === editingSubjectCode)
+    const marks = subjectMarks[editingSubjectCode]
+
+    // Validate marks
+    const validation = validateSubjectMarks(subject, marks)
+    if (!validation.valid) {
+      showToast(validation.message, "warning")
+      return
+    }
+
+    // Convert inputs to numbers
+    const sessional = subject.total_sessionalMarks > 0 ? Number(marks.sessionalMarks) : 0
+    const attendance = subject.total_sessionalMarks > 0 ? Number(marks.attendanceMarks) : 0
+    const termwork = subject.total_termworkMarks > 0 ? Number(marks.termworkMarks) : 0
+    const external = subject.total_externamMarks > 0 ? Number(marks.externalMarks) : 0
+
+    // Calculate total marks
+    const totalObtained = sessional + attendance + termwork + external
+    const totalPossible = subject.total_sessionalMarks + subject.total_termworkMarks + subject.total_externamMarks
+
+    // Calculate percentage
+    const percentage = (totalObtained * 100) / totalPossible
+
+    // Calculate grade and points
+    const { grade, points } = calculateGradeAndPoints(
+      percentage,
+      sessional,
+      termwork,
+      external,
+      subject.total_sessionalMarks,
+      subject.total_termworkMarks,
+      subject.total_externamMarks,
+    )
+
+    // Update the course results
+    const updatedResults = courseResults.map((result) => {
+      if (result.subjectCode === editingSubjectCode) {
+        return {
+          ...result,
+          sessionalMarks: sessional,
+          attendanceMarks: attendance,
+          termworkMarks: termwork,
+          externalMarks: external,
+          totalObtained: totalObtained,
+          percentage: percentage,
+          grade: grade,
+          points: points,
+        }
+      }
+      return result
+    })
+
+    setCourseResults(updatedResults)
+
+    // Recalculate SPI
+    let totalCreditPoints = 0
+    let totalCredits = 0
+
+    updatedResults.forEach((result) => {
+      totalCreditPoints += result.points * result.credit
+      totalCredits += result.credit
+    })
+
+    const calculatedSpi = totalCredits > 0 ? totalCreditPoints / totalCredits : 0
+    setSpi(calculatedSpi)
+
+    // Exit edit mode
+    setEditMode(false)
+    setEditingSubjectCode(null)
+
+    showToast("Subject updated successfully", "success")
+  }
+
+  // Delete a subject result
+  const deleteSubjectResult = (subjectCode) => {
+    if (confirm("Are you sure you want to delete this subject?")) {
+      const updatedResults = courseResults.filter((result) => result.subjectCode !== subjectCode)
+      setCourseResults(updatedResults)
+
+      // Recalculate SPI
+      if (updatedResults.length > 0) {
+        let totalCreditPoints = 0
+        let totalCredits = 0
+
+        updatedResults.forEach((result) => {
+          totalCreditPoints += result.points * result.credit
+          totalCredits += result.credit
+        })
+
+        const calculatedSpi = totalCredits > 0 ? totalCreditPoints / totalCredits : 0
+        setSpi(calculatedSpi)
+      } else {
+        setSpi(null)
+      }
+
+      // Reset the marks for this subject
+      setSubjectMarks((prev) => ({
+        ...prev,
+        [subjectCode]: {
+          sessionalMarks: "",
+          attendanceMarks: "",
+          termworkMarks: "",
+          externalMarks: "",
+        },
+      }))
+
+      showToast("Subject deleted successfully", "info")
+    }
   }
 
   // Get SPI color class
@@ -442,6 +516,83 @@ export default function SpiCalculator() {
     }
   }
 
+  // Render subject input form
+  const renderSubjectInputForm = (subject) => {
+    const marks = subjectMarks[subject.subjectCode]
+
+    return (
+      <div className="subject-input-card" key={subject.subjectCode}>
+        <h4>{subject.subjectName}</h4>
+        <p className="subject-code">
+          {subject.subjectCode} • {subject.subjectCredit} Credits
+        </p>
+
+        <div className="marks-grid">
+          {subject.total_sessionalMarks > 0 && (
+            <>
+              <div className="input-group compact">
+                <label htmlFor={`sessional-${subject.subjectCode}`}>
+                  Sessional (/{subject.total_sessionalMarks - 4})
+                </label>
+                <input
+                  type="number"
+                  id={`sessional-${subject.subjectCode}`}
+                  value={marks.sessionalMarks}
+                  onChange={(e) => handleMarksChange(subject.subjectCode, "sessionalMarks", e.target.value)}
+                  min="0"
+                  max={subject.total_sessionalMarks - 4}
+                  className="small-input"
+                />
+              </div>
+              <div className="input-group compact">
+                <label htmlFor={`attendance-${subject.subjectCode}`}>Attendance (/4)</label>
+                <input
+                  type="number"
+                  id={`attendance-${subject.subjectCode}`}
+                  value={marks.attendanceMarks}
+                  onChange={(e) => handleMarksChange(subject.subjectCode, "attendanceMarks", e.target.value)}
+                  min="0"
+                  max="4"
+                  className="small-input"
+                />
+              </div>
+            </>
+          )}
+
+          {subject.total_termworkMarks > 0 && (
+            <div className="input-group compact">
+              <label htmlFor={`termwork-${subject.subjectCode}`}>Termwork (/{subject.total_termworkMarks})</label>
+              <input
+                type="number"
+                id={`termwork-${subject.subjectCode}`}
+                value={marks.termworkMarks}
+                onChange={(e) => handleMarksChange(subject.subjectCode, "termworkMarks", e.target.value)}
+                min="0"
+                max={subject.total_termworkMarks}
+                className="small-input"
+              />
+            </div>
+          )}
+
+          {subject.total_externamMarks > 0 && (
+            <div className="input-group compact">
+              <label htmlFor={`external-${subject.subjectCode}`}>External (/{subject.total_externamMarks})</label>
+              <input
+                type="number"
+                id={`external-${subject.subjectCode}`}
+                value={marks.externalMarks}
+                onChange={(e) => handleMarksChange(subject.subjectCode, "externalMarks", e.target.value)}
+                min="0"
+                max={subject.total_externamMarks}
+                className="small-input"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="spi-calculator">
       <h2>Semester Performance Index (SPI) Calculator</h2>
@@ -449,7 +600,12 @@ export default function SpiCalculator() {
       <div className="selection-container">
         <div className="selection-group">
           <label htmlFor="branch">Select Branch:</label>
-          <select id="branch" value={selectedBranch?.branchId || ""} onChange={handleBranchChange} disabled={loading}>
+          <select
+            id="branch"
+            value={selectedBranch?.branchId || ""}
+            onChange={handleBranchChange}
+            disabled={loading || editMode}
+          >
             <option value="">-- Select Branch --</option>
             {branches.map((branch) => (
               <option key={branch.branchId} value={branch.branchId}>
@@ -465,7 +621,7 @@ export default function SpiCalculator() {
             id="semester"
             value={selectedSemester || ""}
             onChange={handleSemesterChange}
-            disabled={!selectedBranch || loading}
+            disabled={!selectedBranch || loading || editMode}
           >
             <option value="">-- Select Semester --</option>
             {semesters.map((semester) => (
@@ -481,251 +637,193 @@ export default function SpiCalculator() {
 
       {selectedBranch && selectedSemester && !loading && (
         <>
-          {!showInputCard ? (
-            <div className="add-subject-container">
-              <button className="add-course-button" onClick={() => setShowInputCard(true)}>
-                + Add Subject
-              </button>
-            </div>
-          ) : (
-            <div className="input-card" id="input-card">
-              <div className="selection-group">
-                <label htmlFor="subject">{editMode ? "Edit Subject:" : "Select Subject:"}</label>
-                <select
-                  id="subject"
-                  value={selectedSubject?.subjectCode || ""}
-                  onChange={handleSubjectChange}
-                  disabled={editMode}
+          {editMode ? (
+            <div className="edit-mode-container">
+              <div className="edit-header">
+                <button
+                  className="back-button"
+                  onClick={() => {
+                    setEditMode(false)
+                    setEditingSubjectCode(null)
+                  }}
                 >
-                  <option value="">-- Select Subject --</option>
-                  {availableSubjects.map((subject) => (
-                    <option key={subject.subjectCode} value={subject.subjectCode}>
-                      {subject.subjectName} ({subject.subjectCode})
-                    </option>
-                  ))}
-                </select>
+                  <FaArrowLeft /> Back to All Subjects
+                </button>
+                <h3>Edit Subject</h3>
               </div>
 
-              {selectedSubject && (
-                <>
-                  <div className="subject-info">
-                    <p>
-                      <strong>Subject Credit:</strong> {selectedSubject.subjectCredit}
-                    </p>
-                    <p>
-                      <strong>Total Marks:</strong> {selectedSubject.totalMarks}
-                    </p>
-                  </div>
+              {renderSubjectInputForm(subjects.find((s) => s.subjectCode === editingSubjectCode))}
 
-                  <div className="marks-container">
-                    {selectedSubject.total_sessionalMarks > 0 && (
-                      <div className="marks-input-group" id="sessional_input_container">
-                        <div className="input-row">
-                          <div className="input-group compact">
-                            <label htmlFor="internal">
-                              Sessional Marks (Max {selectedSubject.total_sessionalMarks - 4}):
-                            </label>
-                            <input
-                              type="number"
-                              id="internal"
-                              value={sessionalMarks}
-                              onChange={(e) => setSessionalMarks(e.target.value)}
-                              min="0"
-                              max={selectedSubject.total_sessionalMarks - 4}
-                              className="small-input"
-                            />
-                          </div>
-                          <div className="input-group compact">
-                            <label htmlFor="attendance">Attendance Marks (Max 4):</label>
-                            <input
-                              type="number"
-                              id="attendance"
-                              value={attendanceMarks}
-                              onChange={(e) => setAttendanceMarks(e.target.value)}
-                              min="0"
-                              max="4"
-                              className="small-input"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedSubject.total_termworkMarks > 0 && (
-                      <div className="marks-input-group" id="termwork_input_container">
-                        <div className="input-group compact">
-                          <label htmlFor="termwork">Termwork Marks (Max {selectedSubject.total_termworkMarks}):</label>
-                          <input
-                            type="number"
-                            id="termwork"
-                            value={termworkMarks}
-                            onChange={(e) => setTermworkMarks(e.target.value)}
-                            min="0"
-                            max={selectedSubject.total_termworkMarks}
-                            className="small-input"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedSubject.total_externamMarks > 0 && (
-                      <div className="marks-input-group" id="external_input_container">
-                        <div className="input-group compact">
-                          <label htmlFor="external">External Marks (Max {selectedSubject.total_externamMarks}):</label>
-                          <input
-                            type="number"
-                            id="external"
-                            value={externalMarks}
-                            onChange={(e) => setExternalMarks(e.target.value)}
-                            min="0"
-                            max={selectedSubject.total_externamMarks}
-                            className="small-input"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="button-group">
-                    <button className="calculate-button" onClick={addOrUpdateSubjectResult}>
-                      {editMode ? "Update Subject" : "Add Subject"}
-                    </button>
-                    <button
-                      className="cancel-button"
-                      onClick={() => {
-                        setShowInputCard(false)
-                        setEditMode(false)
-                        setEditingResultId(null)
-                        resetForm()
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {courseResults.length > 0 && (
-            <div className="results-container">
-              <h3>Subject Results</h3>
-              <div className="semesters-container">
-                <div className="subject-header">
-                  <div className="subject-name">Subject</div>
-                  <div className="subject-credit">Credits</div>
-                  <div className="subject-marks">Marks</div>
-                  <div className="subject-grade">Grade</div>
-                  <div className="subject-actions">Actions</div>
-                </div>
-
-                {courseResults.map((result) => (
-                  <div className="subject-row" key={result.id}>
-                    <div className="subject-name">{result.subjectName}</div>
-                    <div className="subject-credit">{result.credit}</div>
-                    <div className="subject-marks">
-                      {result.totalObtained}/{result.totalMarks}
-                    </div>
-                    <div className="subject-grade">
-                      <span className={`bolder ${getGradeColorClass(result.points)}`}>
-                        {result.grade} ({result.points})
-                      </span>
-                    </div>
-                    <div className="subject-actions">
-                      <button className="edit-button" onClick={() => editSubjectResult(result.id)} title="Edit">
-                        <FaEdit />
-                      </button>
-                      <button className="delete-button" onClick={() => deleteSubjectResult(result.id)} title="Delete">
-                        <FaTrash />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="details-toggle">
-                <button className="toggle-button" onClick={() => setShowDetails(!showDetails)}>
-                  {showDetails ? (
-                    <>
-                      Hide Details <FaChevronUp />
-                    </>
-                  ) : (
-                    <>
-                      Show Details <FaChevronDown />
-                    </>
-                  )}
+              <div className="button-group">
+                <button className="calculate-button" onClick={updateSubject}>
+                  Update Subject
+                </button>
+                <button
+                  className="cancel-button"
+                  onClick={() => {
+                    setEditMode(false)
+                    setEditingSubjectCode(null)
+                  }}
+                >
+                  Cancel
                 </button>
               </div>
+            </div>
+          ) : (
+            <>
+              <div className="all-subjects-container">
+                {!courseResults.length > 0 ? (
+                  <>
+                    <div className="subjects-header">
+                      <h3>Enter Marks for All Subjects</h3>
+                    </div>
 
-              {showDetails && (
-                <div className="subject-details-container">
-                  <h4>Detailed Marks</h4>
-                  {courseResults.map((result) => (
-                    <div className="subject-details" key={`details-${result.id}`}>
-                      <h5>
-                        {result.subjectName} ({result.subjectCode})
-                      </h5>
-                      <div className="details-grid">
-                        {result.total_sessionalMarks > 0 && (
-                          <div className="detail-item">
-                            <span className="detail-label">Sessional:</span>
-                            <span className="detail-value">
-                              {result.sessionalMarks + result.attendanceMarks}/{result.total_sessionalMarks}
-                            </span>
-                          </div>
-                        )}
-                        {result.total_termworkMarks > 0 && (
-                          <div className="detail-item">
-                            <span className="detail-label">Termwork:</span>
-                            <span className="detail-value">
-                              {result.termworkMarks}/{result.total_termworkMarks}
-                            </span>
-                          </div>
-                        )}
-                        {result.total_externamMarks > 0 && (
-                          <div className="detail-item">
-                            <span className="detail-label">External:</span>
-                            <span className="detail-value">
-                              {result.externalMarks}/{result.total_externamMarks}
-                            </span>
-                          </div>
-                        )}
-                        <div className="detail-item">
-                          <span className="detail-label">Total:</span>
-                          <span className="detail-value">
-                            {result.totalObtained}/{result.totalMarks} ({result.percentage.toFixed(2)}%)
+                    <div className="subjects-grid">{subjects.map((subject) => renderSubjectInputForm(subject))}</div>
+
+                    <div className="button-group calculate-all-container">
+                      <button className="calculate-button" onClick={calculateAllSPI}>
+                        Calculate SPI
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="recalculate-container">
+                    <button className="recalculate-button" onClick={() => setCourseResults([])}>
+                      Edit All Subjects
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {courseResults.length > 0 && (
+                <div className="results-container">
+                  <h3>Subject Results</h3>
+                  <div className="semesters-container">
+                    <div className="subject-header">
+                      <div className="subject-name">Subject</div>
+                      <div className="subject-credit">Credits</div>
+                      <div className="subject-marks">Marks</div>
+                      <div className="subject-grade">Grade</div>
+                      <div className="subject-actions">Actions</div>
+                    </div>
+
+                    {courseResults.map((result) => (
+                      <div className="subject-row" key={result.id}>
+                        <div className="subject-name">{result.subjectName}</div>
+                        <div className="subject-credit">{result.credit}</div>
+                        <div className="subject-marks">
+                          {result.totalObtained}/{result.totalMarks}
+                        </div>
+                        <div className="subject-grade">
+                          <span className={`bolder ${getGradeColorClass(result.points)}`}>
+                            {result.grade} ({result.points})
                           </span>
                         </div>
+                        <div className="subject-actions">
+                          <button
+                            className="edit-button"
+                            onClick={() => editSubjectResult(result.subjectCode)}
+                            title="Edit"
+                          >
+                            <FaEdit />
+                          </button>
+                          <button
+                            className="delete-button"
+                            onClick={() => deleteSubjectResult(result.subjectCode)}
+                            title="Delete"
+                          >
+                            <FaTrash />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="details-toggle">
+                    <button className="toggle-button" onClick={() => setShowDetails(!showDetails)}>
+                      {showDetails ? (
+                        <>
+                          Hide Details <FaChevronUp />
+                        </>
+                      ) : (
+                        <>
+                          Show Details <FaChevronDown />
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {showDetails && (
+                    <div className="subject-details-container">
+                      <h4>Detailed Marks</h4>
+                      {courseResults.map((result) => (
+                        <div className="subject-details" key={`details-${result.id}`}>
+                          <h5>
+                            {result.subjectName} ({result.subjectCode})
+                          </h5>
+                          <div className="details-grid">
+                            {result.total_sessionalMarks > 0 && (
+                              <div className="detail-item">
+                                <span className="detail-label">Sessional:</span>
+                                <span className="detail-value">
+                                  {result.sessionalMarks + result.attendanceMarks}/{result.total_sessionalMarks}
+                                </span>
+                              </div>
+                            )}
+                            {result.total_termworkMarks > 0 && (
+                              <div className="detail-item">
+                                <span className="detail-label">Termwork:</span>
+                                <span className="detail-value">
+                                  {result.termworkMarks}/{result.total_termworkMarks}
+                                </span>
+                              </div>
+                            )}
+                            {result.total_externamMarks > 0 && (
+                              <div className="detail-item">
+                                <span className="detail-label">External:</span>
+                                <span className="detail-value">
+                                  {result.externalMarks}/{result.total_externamMarks}
+                                </span>
+                              </div>
+                            )}
+                            <div className="detail-item">
+                              <span className="detail-label">Total:</span>
+                              <span className="detail-value">
+                                {result.totalObtained}/{result.totalMarks} ({result.percentage.toFixed(2)}%)
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {spi !== null && (
+                    <div className="spi-result-container">
+                      <h3>Your Semester Performance Index (SPI)</h3>
+                      <div className={`spi-value bolder ${getSpiColorClass()}`} id="spi">
+                        {spi.toFixed(2)}
+                      </div>
+                      <div className="grade-description">
+                        {spi >= 8.5
+                          ? "Outstanding Performance!"
+                          : spi >= 7.5
+                            ? "Excellent Performance!"
+                            : spi >= 6.5
+                              ? "Very Good Performance!"
+                              : spi >= 5.5
+                                ? "Good Performance!"
+                                : spi >= 4.5
+                                  ? "Average Performance"
+                                  : spi >= 4.0
+                                    ? "Below Average"
+                                    : "Needs Improvement"}
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
-
-              {spi !== null && (
-                <div className="spi-result-container">
-                  <h3>Your Semester Performance Index (SPI)</h3>
-                  <div className={`spi-value bolder ${getSpiColorClass()}`} id="spi">
-                    {spi.toFixed(2)}
-                  </div>
-                  <div className="grade-description">
-                    {spi >= 8.5
-                      ? "Outstanding Performance!"
-                      : spi >= 7.5
-                        ? "Excellent Performance!"
-                        : spi >= 6.5
-                          ? "Very Good Performance!"
-                          : spi >= 5.5
-                            ? "Good Performance!"
-                            : spi >= 4.5
-                              ? "Average Performance"
-                              : spi >= 4.0
-                                ? "Below Average"
-                                : "Needs Improvement"}
-                  </div>
-                </div>
-              )}
-            </div>
+            </>
           )}
         </>
       )}

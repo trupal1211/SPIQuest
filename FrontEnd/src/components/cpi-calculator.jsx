@@ -1,5 +1,7 @@
+"use client"
+
 import { useState, useEffect } from "react"
-import { FaEdit, FaTrash } from "react-icons/fa"
+import { FaEdit, FaTrash, FaArrowRight, FaArrowLeft } from "react-icons/fa"
 import { showToast } from "./toast"
 
 export default function CpiCalculator() {
@@ -7,13 +9,14 @@ export default function CpiCalculator() {
   const [selectedBranch, setSelectedBranch] = useState(null)
   const [semesterResults, setSemesterResults] = useState([])
   const [cpi, setCpi] = useState(null)
-  const [showInputForm, setShowInputForm] = useState(false)
   const [currentSemester, setCurrentSemester] = useState(null)
   const [spiValue, setSpiValue] = useState("")
   const [editMode, setEditMode] = useState(false)
   const [editingResultId, setEditingResultId] = useState(null)
   const [loading, setLoading] = useState(false)
   const [semesters, setSemesters] = useState([])
+  const [currentSemesterIndex, setCurrentSemesterIndex] = useState(0)
+  const [showInputForm, setShowInputForm] = useState(true)
 
   // Fetch branches from API
   useEffect(() => {
@@ -59,6 +62,12 @@ export default function CpiCalculator() {
       // Find the branch object
       const selectedBranchObj = branches.find((branch) => branch.branchId === branchId)
       setSelectedBranch(selectedBranchObj)
+
+      // Reset to first semester
+      setCurrentSemesterIndex(0)
+      if (semesterData.length > 0) {
+        setCurrentSemester(semesterData[0])
+      }
     } catch (error) {
       showToast(error.message, "error")
     } finally {
@@ -67,49 +76,116 @@ export default function CpiCalculator() {
 
     setSemesterResults([])
     setCpi(null)
-    setShowInputForm(false)
-    setCurrentSemester(null)
     setSpiValue("")
     setEditMode(false)
     setEditingResultId(null)
+    setShowInputForm(true)
   }
 
-  // Get available semesters (not already added)
-  const getAvailableSemesters = () => {
-    if (!semesters.length) return []
+  // Navigate to next semester and save current semester data
+  const goToNextSemester = () => {
+    // First save the current semester data
+    if (spiValue && !isSemesterAdded(currentSemester?.semester)) {
+      saveSemesterData()
+    }
 
-    return semesters.filter((semester) => {
-      const isAdded = semesterResults.some((result) => result.semNo === semester.semester)
-      return !isAdded || (editMode && currentSemester && semester.semester === currentSemester.semester)
-    })
+    // Then navigate to next semester
+    if (currentSemesterIndex < semesters.length - 1) {
+      const nextIndex = currentSemesterIndex + 1
+      setCurrentSemesterIndex(nextIndex)
+      setCurrentSemester(semesters[nextIndex])
+      setSpiValue("")
+    } else if (semesterResults.length > 0) {
+      // If we're at the last semester and have results, calculate CPI
+      calculateCpi()
+    }
   }
 
-  // Handle semester selection
-  const handleSemesterChange = (e) => {
-    const semId = Number.parseInt(e.target.value)
-    const semester = semesters.find((s) => s.semesterDataId === semId) || null
-    setCurrentSemester(semester)
+  // Navigate to previous semester
+  const goToPrevSemester = () => {
+    if (currentSemesterIndex > 0) {
+      const prevIndex = currentSemesterIndex - 1
+      setCurrentSemesterIndex(prevIndex)
+      setCurrentSemester(semesters[prevIndex])
 
-    // If in edit mode, pre-fill the form with existing data
-    if (editMode && editingResultId) {
-      const resultToEdit = semesterResults.find((result) => result.id === editingResultId)
-      if (resultToEdit && resultToEdit.semNo === semester?.semester) {
-        setSpiValue(resultToEdit.spi)
+      // Pre-fill with existing data if available
+      const existingResult = semesterResults.find((result) => result.semNo === semesters[prevIndex].semester)
+
+      if (existingResult) {
+        setSpiValue(existingResult.spi)
       } else {
         setSpiValue("")
       }
-    } else {
-      setSpiValue("")
     }
   }
 
-  // Add or update semester result
-  const addOrUpdateSemesterResult = () => {
+  // Check if semester is already added
+  const isSemesterAdded = (semNo) => {
+    return semesterResults.some((result) => result.semNo === semNo)
+  }
+
+  // Save current semester data
+  const saveSemesterData = () => {
     if (!currentSemester) {
-      showToast("Please select a semester", "warning")
-      return
+      return false
     }
 
+    if (spiValue === "") {
+      showToast("Please enter SPI value", "warning")
+      return false
+    }
+
+    const spi = Number.parseFloat(spiValue.toString())
+
+    if (isNaN(spi) || spi < 0 || spi > 10) {
+      showToast("SPI must be between 0 and 10", "error")
+      return false
+    }
+
+    // Check if semester already exists
+    if (isSemesterAdded(currentSemester.semester)) {
+      return true // Already added, so consider it a success
+    }
+
+    // Create new semester result
+    const newSemesterResult = {
+      id: Date.now(),
+      semNo: currentSemester.semester,
+      semName: `Semester ${currentSemester.semester}`,
+      credits: currentSemester.semesterCredit,
+      spi: spi,
+    }
+
+    // Add to results
+    const updatedResults = [...semesterResults, newSemesterResult]
+    setSemesterResults(updatedResults)
+
+    showToast(`Semester ${currentSemester.semester} added successfully`, "success")
+    return true
+  }
+
+  // Edit a semester result
+  const editSemesterResult = (id) => {
+    const resultToEdit = semesterResults.find((result) => result.id === id)
+    if (resultToEdit) {
+      setEditMode(true)
+      setEditingResultId(id)
+
+      // Find and set the semester
+      const semester = semesters.find((s) => s.semester === resultToEdit.semNo)
+      setCurrentSemester(semester)
+
+      // Find the index of this semester
+      const index = semesters.findIndex((s) => s.semester === resultToEdit.semNo)
+      setCurrentSemesterIndex(index)
+
+      // Set form values
+      setSpiValue(resultToEdit.spi)
+    }
+  }
+
+  // Update a semester result
+  const updateSemesterResult = () => {
     if (spiValue === "") {
       showToast("Please enter SPI value", "warning")
       return
@@ -122,62 +198,25 @@ export default function CpiCalculator() {
       return
     }
 
-    // Check if semester already exists (for non-edit mode)
-    if (!editMode) {
-      const existingSemester = semesterResults.find((sr) => sr.semNo === currentSemester.semester)
-      if (existingSemester) {
-        showToast("Semester already added", "warning")
-        return
+    // Update the semester result
+    const updatedResults = semesterResults.map((result) => {
+      if (result.id === editingResultId) {
+        return {
+          ...result,
+          spi: spi,
+        }
       }
-    }
-
-    // Create new semester result
-    const newSemesterResult = {
-      id: editMode ? editingResultId : Date.now(),
-      semNo: currentSemester.semester,
-      semName: `Semester ${currentSemester.semester}`,
-      credits: currentSemester.semesterCredit,
-      spi: spi,
-    }
-
-    // Add to or update results
-    let updatedResults
-    if (editMode) {
-      updatedResults = semesterResults.map((result) => (result.id === editingResultId ? newSemesterResult : result))
-      showToast("Semester updated successfully", "success")
-    } else {
-      updatedResults = [...semesterResults, newSemesterResult]
-      showToast("Semester added successfully", "success")
-    }
+      return result
+    })
 
     setSemesterResults(updatedResults)
 
-    // Calculate CPI
-    calculateCpi(updatedResults)
-
-    // Reset form and edit mode
-    setCurrentSemester(null)
-    setSpiValue("")
-    setShowInputForm(false)
+    // Exit edit mode
     setEditMode(false)
     setEditingResultId(null)
-  }
+    setSpiValue("")
 
-  // Edit a semester result
-  const editSemesterResult = (id) => {
-    const resultToEdit = semesterResults.find((result) => result.id === id)
-    if (resultToEdit) {
-      setEditMode(true)
-      setEditingResultId(id)
-      setShowInputForm(true)
-
-      // Find and set the semester
-      const semester = semesters.find((s) => s.semester === resultToEdit.semNo)
-      setCurrentSemester(semester)
-
-      // Set form values
-      setSpiValue(resultToEdit.spi)
-    }
+    showToast("Semester updated successfully", "success")
   }
 
   // Delete a semester result
@@ -198,7 +237,7 @@ export default function CpiCalculator() {
   }
 
   // Calculate CPI
-  const calculateCpi = (results) => {
+  const calculateCpi = (results = semesterResults) => {
     let totalCreditPoints = 0
     let totalCredits = 0
 
@@ -209,6 +248,9 @@ export default function CpiCalculator() {
 
     const calculatedCpi = totalCredits > 0 ? totalCreditPoints / totalCredits : 0
     setCpi(calculatedCpi)
+    setShowInputForm(false)
+
+    showToast("CPI calculated successfully!", "success")
   }
 
   // Get CPI color class
@@ -226,6 +268,12 @@ export default function CpiCalculator() {
     }
   }
 
+  // Handle SPI input change
+  const handleSpiChange = (e) => {
+    const value = e.target.value
+    setSpiValue(value)
+  }
+
   return (
     <div className="cpi-calculator">
       <h2>Cumulative Performance Index (CPI) Calculator</h2>
@@ -237,7 +285,7 @@ export default function CpiCalculator() {
             id="branch-cpi"
             value={selectedBranch?.branchId || ""}
             onChange={handleBranchChange}
-            disabled={loading}
+            disabled={loading || editMode}
           >
             <option value="">-- Select Branch --</option>
             {branches.map((branch) => (
@@ -253,36 +301,27 @@ export default function CpiCalculator() {
 
       {selectedBranch && !loading && (
         <>
-          {!showInputForm ? (
-            <div className="add-subject-container">
-              <button className="add-course-button" onClick={() => setShowInputForm(true)}>
-                + Add Semester Result
-              </button>
-            </div>
-          ) : (
-            <div className="input-card">
-              <div className="selection-group">
-                <label htmlFor="semester-select">{editMode ? "Edit Semester:" : "Select Semester:"}</label>
-                <select
-                  id="semester-select"
-                  value={currentSemester?.semesterDataId || ""}
-                  onChange={handleSemesterChange}
-                  disabled={editMode}
-                >
-                  <option value="">-- Select Semester --</option>
-                  {getAvailableSemesters().map((semester) => (
-                    <option key={semester.semesterDataId} value={semester.semesterDataId}>
-                      Semester {semester.semester} ({semester.semesterCredit} credits)
-                    </option>
-                  ))}
-                </select>
-              </div>
+          {showInputForm && (
+            <div className="semester-input-container">
+              {editMode ? (
+                <div className="edit-mode-container">
+                  <div className="edit-header">
+                    <button
+                      className="back-button"
+                      onClick={() => {
+                        setEditMode(false)
+                        setEditingResultId(null)
+                        setSpiValue("")
+                      }}
+                    >
+                      <FaArrowLeft /> Back to All Semesters
+                    </button>
+                    <h3>Edit Semester {currentSemester?.semester}</h3>
+                  </div>
 
-              {currentSemester && (
-                <>
                   <div className="semester-info">
                     <p>
-                      <strong>Semester Credits:</strong> {currentSemester.semesterCredit}
+                      <strong>Semester Credits:</strong> {currentSemester?.semesterCredit}
                     </p>
                   </div>
 
@@ -292,32 +331,93 @@ export default function CpiCalculator() {
                       type="number"
                       id="spi-input"
                       value={spiValue}
-                      onChange={(e) => setSpiValue(e.target.value)}
+                      onChange={handleSpiChange}
                       min="0"
                       max="10"
-                      step="0.5"
+                      step="0.01"
                       className="small-input"
                     />
                   </div>
 
                   <div className="button-group">
-                    <button className="calculate-button" onClick={addOrUpdateSemesterResult}>
-                      {editMode ? "Update Semester" : "Add Semester"}
+                    <button className="calculate-button" onClick={updateSemesterResult}>
+                      Update Semester
                     </button>
                     <button
                       className="cancel-button"
                       onClick={() => {
-                        setShowInputForm(false)
                         setEditMode(false)
                         setEditingResultId(null)
-                        setCurrentSemester(null)
                         setSpiValue("")
                       }}
                     >
                       Cancel
                     </button>
                   </div>
-                </>
+                </div>
+              ) : (
+                <div className="semester-card">
+                  <div className="semester-navigation">
+                    <button className="nav-button" onClick={goToPrevSemester} disabled={currentSemesterIndex === 0}>
+                      <FaArrowLeft />
+                    </button>
+                    <h3>Semester {currentSemester?.semester}</h3>
+                    <button
+                      className="nav-button"
+                      onClick={goToNextSemester}
+                      disabled={currentSemesterIndex === semesters.length - 1 && semesterResults.length === 0}
+                    >
+                      <FaArrowRight />
+                    </button>
+                  </div>
+
+                  <div className="semester-info">
+                    <p>
+                      <strong>Semester Credits:</strong> {currentSemester?.semesterCredit}
+                    </p>
+                    {isSemesterAdded(currentSemester?.semester) && (
+                      <p className="already-added">This semester has already been added</p>
+                    )}
+                  </div>
+
+                  {!isSemesterAdded(currentSemester?.semester) && (
+                    <div className="input-group">
+                      <label htmlFor="spi-input">Enter SPI (0-10):</label>
+                      <input
+                        type="number"
+                        id="spi-input"
+                        value={spiValue}
+                        onChange={handleSpiChange}
+                        min="0"
+                        max="10"
+                        step="0.01"
+                        className="small-input"
+                      />
+                    </div>
+                  )}
+
+                  <div className="semester-actions-container">
+                    {currentSemesterIndex < semesters.length - 1 ? (
+                      <div className="next-semester">
+                        <button
+                          className="next-link"
+                          onClick={goToNextSemester}
+                          disabled={!spiValue && !isSemesterAdded(currentSemester?.semester)}
+                        >
+                          Next Semester <FaArrowRight />
+                        </button>
+                      </div>
+                    ) : (
+                      semesterResults.length > 0 && (
+                        <div className="next-semester">
+                          <button className="calculate-cpi-link" onClick={() => calculateCpi()}>
+                            Calculate CPI <FaArrowRight />
+                          </button>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           )}
@@ -350,26 +450,42 @@ export default function CpiCalculator() {
                 ))}
               </div>
 
-              {cpi !== null && (
-                <div className="cpi-result-container">
-                  <h3>Your Cumulative Performance Index (CPI)</h3>
-                  <div className={`cpi-value bolder ${getCpiColorClass()}`}>{cpi.toFixed(2)}</div>
-                  <div className="grade-description">
-                    {cpi >= 8.5
-                      ? "Outstanding Performance!"
-                      : cpi >= 7.5
-                        ? "Excellent Performance!"
-                        : cpi >= 6.5
-                          ? "Very Good Performance!"
-                          : cpi >= 5.5
-                            ? "Good Performance!"
-                            : cpi >= 4.5
-                              ? "Average Performance"
-                              : cpi >= 4.0
-                                ? "Below Average"
-                                : "Needs Improvement"}
-                  </div>
+              {!cpi && (
+                <div className="cpi-actions">
+                  <button className="calculate-button" onClick={() => calculateCpi()}>
+                    Calculate CPI
+                  </button>
                 </div>
+              )}
+
+              {cpi !== null && (
+                <>
+                  <div className="cpi-result-container">
+                    <h3>Your Cumulative Performance Index (CPI)</h3>
+                    <div className={`cpi-value bolder ${getCpiColorClass()}`}>{cpi.toFixed(2)}</div>
+                    <div className="grade-description">
+                      {cpi >= 8.5
+                        ? "Outstanding Performance!"
+                        : cpi >= 7.5
+                          ? "Excellent Performance!"
+                          : cpi >= 6.5
+                            ? "Very Good Performance!"
+                            : cpi >= 5.5
+                              ? "Good Performance!"
+                              : cpi >= 4.5
+                                ? "Average Performance"
+                                : cpi >= 4.0
+                                  ? "Below Average"
+                                  : "Needs Improvement"}
+                    </div>
+                  </div>
+
+                  <div className="recalculate-container">
+                    <button className="recalculate-button" onClick={() => setShowInputForm(true)}>
+                      Edit Semesters
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           )}

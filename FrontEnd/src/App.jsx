@@ -35,7 +35,7 @@ export default function App() {
 
       <footer>
         <p>© Dharmsinh Desai University ( FoT ) , GPA Calculator.</p>
-        <p>Team QueryNest - Trupal Godhat , Krunal Dudhatra</p>
+        <p>Team QueryNest - <a href="mailto:example@email.com" style={{color:'white'}}>info.querynest@gmail.com</a></p>
       </footer>
     </div>
   )

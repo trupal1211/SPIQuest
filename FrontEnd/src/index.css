@@ -1,77 +1,4 @@
-/* :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-}
-
-
- */
-
-
- /* Reset and base styles */
+/* Reset and base styles */
 * {
   margin: 0;
   padding: 0;
@@ -736,6 +663,264 @@ footer {
   background-color: #f9fafb;
 }
 
+/* Add these new styles to your existing CSS file */
+
+.all-subjects-container {
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.all-subjects-container h3 {
+  color: #1e40af;
+  margin-bottom: 1.5rem;
+}
+
+.subject-input-card {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.subject-input-card h4 {
+  color: #1e40af;
+  margin-bottom: 1rem;
+}
+
+.calculate-all-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.edit-mode-container {
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.edit-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.edit-header h3 {
+  color: #1e40af;
+  margin: 0;
+  margin-left: 1rem;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #f3f4f6;
+  border: 1px solid #d1d5db;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.back-button:hover {
+  background-color: #e5e7eb;
+}
+
+/* Add these new styles for the improved UI */
+
+/* SPI Calculator - Subject Grid Layout */
+.subjects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.subject-input-card {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.subject-input-card h4 {
+  color: #1e40af;
+  margin-bottom: 0.25rem;
+  font-size: 1rem;
+}
+
+.subject-code {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+}
+
+.marks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.marks-grid .input-group {
+  margin-bottom: 0;
+}
+
+.marks-grid .input-group label {
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.marks-grid .input-group input {
+  padding: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.recalculate-container {
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0;
+}
+
+.recalculate-button {
+  background-color: #e0e7ff;
+  color: #1e40af;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.recalculate-button:hover {
+  background-color: #c7d2fe;
+}
+
+/* CPI Calculator - Semester Navigation */
+.semester-card {
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.semester-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.semester-navigation h3 {
+  color: #1e40af;
+  margin: 0;
+}
+
+.nav-button {
+  background: none;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #4b5563;
+}
+
+.nav-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.nav-button:not(:disabled):hover {
+  background-color: #f3f4f6;
+  color: #1e40af;
+}
+
+.next-semester {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.next-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #1e40af;
+  background: none;
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.5rem;
+}
+
+.next-link:hover {
+  text-decoration: underline;
+}
+
+.already-added {
+  color: #dc2626;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-top: 0.5rem;
+}
+
+.cpi-actions {
+  display: flex;
+  justify-content: center;
+  margin: 1.5rem 0;
+}
+
+.semester-input-container {
+  margin-bottom: 2rem;
+}
+
+/* Semester actions container */
+.semester-actions-container {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.calculate-cpi-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #1e40af;
+  background: none;
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.5rem;
+}
+
+.calculate-cpi-link:hover {
+  text-decoration: underline;
+}
+
+.next-link:disabled,
+.calculate-cpi-link:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 /* Responsive styles */
 @media (max-width: 768px) {
   .selection-container {
@@ -756,9 +941,48 @@ footer {
   .details-grid {
     grid-template-columns: 1fr 1fr;
   }
+
+  .subjects-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .marks-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* Adjust padding for smaller screens */
+  .calculator-content {
+    padding: 1.5rem;
+  }
+
+  .subject-input-card,
+  .semester-card,
+  .edit-mode-container,
+  .results-container {
+    padding: 1rem;
+  }
 }
 
 @media (max-width: 640px) {
+  /* Adjust header and content spacing */
+  header {
+    padding: 1.5rem 1rem;
+  }
+
+  header h1 {
+    font-size: 2rem;
+  }
+
+  main {
+    padding: 1rem;
+  }
+
+  /* Adjust calculator tabs */
+  .calculator-tabs button {
+    padding: 0.75rem 1rem;
+  }
+
+  /* Adjust table display for small screens */
   .semester-header,
   .subject-header {
     display: none;
@@ -769,6 +993,12 @@ footer {
     grid-template-columns: 1fr;
     gap: 0.5rem;
     padding: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .semester-row:last-child,
+  .subject-row:last-child {
+    border-bottom: none;
   }
 
   .semester-name::before,
@@ -810,6 +1040,70 @@ footer {
 
   .button-group {
     flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  /* Adjust navigation in semester card */
+  .semester-navigation {
+    margin-bottom: 1rem;
+  }
+
+  .semester-navigation h3 {
+    font-size: 1.1rem;
+  }
+
+  /* Adjust result containers */
+  .spi-value,
+  .cpi-value {
+    font-size: 2.5rem;
+  }
+
+  .grade-description {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Further adjustments for very small screens */
+  .marks-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .calculator-tabs {
+    flex-direction: column;
+  }
+
+  .calculator-tabs button {
+    width: 100%;
+    text-align: center;
+  }
+
+  .calculator-tabs button.active::after {
+    height: 2px;
+    bottom: 0;
+  }
+
+  /* Adjust buttons and inputs */
+  .input-group input.small-input {
+    width: 100%;
+    max-width: none;
+  }
+
+  .calculate-button,
+  .cancel-button,
+  .recalculate-button {
+    width: 100%;
+  }
+
+  /* Adjust semester navigation */
+  .semester-navigation {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .nav-button {
+    width: 32px;
+    height: 32px;
   }
 }
 
