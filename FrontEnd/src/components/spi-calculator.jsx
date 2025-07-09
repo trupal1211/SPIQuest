@@ -4,6 +4,8 @@ import { useState, useEffect } from "react"
 import { FaEdit, FaTrash, FaChevronDown, FaChevronUp, FaArrowLeft } from "react-icons/fa"
 import { showToast } from "./toast"
 
+const BASE_URL = "https://backend-spiquest-1.onrender.com"
+
 export default function SpiCalculator() {
   const [branches, setBranches] = useState([])
   const [selectedBranch, setSelectedBranch] = useState(null)
@@ -23,7 +25,7 @@ export default function SpiCalculator() {
     const fetchBranches = async () => {
       try {
         setLoading(true)
-        const response = await fetch("http://localhost:3000/branches")
+        const response = await fetch(`${BASE_URL}/api/branches`)
         if (!response.ok) {
           throw new Error("Failed to fetch branches")
         }
@@ -41,7 +43,7 @@ export default function SpiCalculator() {
 
   // Handle branch selection
   const handleBranchChange = async (e) => {
-    const branchId = Number.parseInt(e.target.value)
+    const branchId = e.target.value
     if (!branchId) {
       setSelectedBranch(null)
       setSemesters([])
@@ -51,7 +53,7 @@ export default function SpiCalculator() {
     try {
       setLoading(true)
       // Fetch semester data for the selected branch
-      const response = await fetch(`http://localhost:3000/branch/${branchId}`)
+      const response = await fetch(`${BASE_URL}/api/branch/${branchId}`)
       if (!response.ok) {
         throw new Error("Failed to fetch semester data")
       }
@@ -60,7 +62,7 @@ export default function SpiCalculator() {
       setSemesters(semesterData)
 
       // Find the branch object
-      const selectedBranchObj = branches.find((branch) => branch.branchId === branchId)
+      const selectedBranchObj = branches.find((branch) => branch._id === branchId)
       setSelectedBranch(selectedBranchObj)
     } catch (error) {
       showToast(error.message, "error")
@@ -91,7 +93,7 @@ export default function SpiCalculator() {
       try {
         setLoading(true)
         // Fetch subjects for the selected branch and semester
-        const response = await fetch(`http://localhost:3000/branch/${selectedBranch.branchId}/semester/${semNo}`)
+        const response = await fetch(`${BASE_URL}/api/branch/${selectedBranch._id}/semester/${semNo}`)
 
         if (!response.ok) {
           throw new Error("Failed to fetch subjects")
@@ -225,15 +227,18 @@ export default function SpiCalculator() {
       const sessional = Number(sessionalMarks)
       const attendance = Number(attendanceMarks)
 
-      if (sessional > total_sessionalMarks - 4) {
+      if (sessional > total_sessionalMarks - subject.attendance) {
         return {
           valid: false,
-          message: `Sessional marks cannot exceed ${total_sessionalMarks - 4} for ${subject.subjectName}`,
+          message: `Sessional marks cannot exceed ${total_sessionalMarks - subject.attendance} for ${subject.subjectName}`,
         }
       }
 
-      if (attendance > 4) {
-        return { valid: false, message: `Attendance marks cannot exceed 4 for ${subject.subjectName}` }
+      if (attendance > subject.attendance) {
+        return {
+          valid: false,
+          message: `Attendance marks cannot exceed ${subject.attendance} for ${subject.subjectName}`,
+        }
       }
     }
 
@@ -532,7 +537,7 @@ export default function SpiCalculator() {
             <>
               <div className="input-group compact">
                 <label htmlFor={`sessional-${subject.subjectCode}`}>
-                  Sessional (/{subject.total_sessionalMarks - 4})
+                  Sessional (/{subject.total_sessionalMarks - subject.attendance})
                 </label>
                 <input
                   type="number"
@@ -540,19 +545,19 @@ export default function SpiCalculator() {
                   value={marks.sessionalMarks}
                   onChange={(e) => handleMarksChange(subject.subjectCode, "sessionalMarks", e.target.value)}
                   min="0"
-                  max={subject.total_sessionalMarks - 4}
+                  max={subject.total_sessionalMarks - subject.attendance}
                   className="small-input"
                 />
               </div>
               <div className="input-group compact">
-                <label htmlFor={`attendance-${subject.subjectCode}`}>Attendance (/4)</label>
+                <label htmlFor={`attendance-${subject.subjectCode}`}>Attendance (/{subject.attendance})</label>
                 <input
                   type="number"
                   id={`attendance-${subject.subjectCode}`}
                   value={marks.attendanceMarks}
                   onChange={(e) => handleMarksChange(subject.subjectCode, "attendanceMarks", e.target.value)}
                   min="0"
-                  max="4"
+                  max={subject.attendance}
                   className="small-input"
                 />
               </div>
@@ -602,13 +607,13 @@ export default function SpiCalculator() {
           <label htmlFor="branch">Select Branch:</label>
           <select
             id="branch"
-            value={selectedBranch?.branchId || ""}
+            value={selectedBranch?._id || ""}
             onChange={handleBranchChange}
             disabled={loading || editMode}
           >
             <option value="">-- Select Branch --</option>
             {branches.map((branch) => (
-              <option key={branch.branchId} value={branch.branchId}>
+              <option key={branch._id} value={branch._id}>
                 {branch.branchName}
               </option>
             ))}
@@ -625,8 +630,8 @@ export default function SpiCalculator() {
           >
             <option value="">-- Select Semester --</option>
             {semesters.map((semester) => (
-              <option key={semester.semesterDataId} value={semester.semester}>
-                Semester {semester.semester}
+              <option key={semester._id} value={semester.semesterNo}>
+                Semester {semester.semesterNo}
               </option>
             ))}
           </select>
@@ -681,7 +686,7 @@ export default function SpiCalculator() {
                     <div className="subjects-grid">{subjects.map((subject) => renderSubjectInputForm(subject))}</div>
 
                     <div className="button-group calculate-all-container">
-                      <button className="calculate-button" onClick={calculateAllSPI}>
+                      <button style={{textAlign:'center',display:"inline"}} className="calculate-button" onClick={calculateAllSPI}>
                         Calculate SPI
                       </button>
                     </div>
@@ -830,4 +835,3 @@ export default function SpiCalculator() {
     </div>
   )
 }
-
