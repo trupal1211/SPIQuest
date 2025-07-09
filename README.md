@@ -1,46 +1,54 @@
-# 🎓 College GPA Calculator
+# 🎓 College GPA Calculator – SPIQuest (MERN)
 
 A modern, responsive web application for calculating Semester Performance Index (SPI) and Cumulative Performance Index (CPI) for college students.
 
+> 🧪 **Live Demo**: [https://spi-quest.vercel.app](https://spi-quest.vercel.app)
+
+---
+
 ## ✨ Features
 
-- 📊 **SPI Calculator**: Calculate your Semester Performance Index based on subject marks
+- 📊 **SPI Calculator**: Calculate your Semester Performance Index based on subject grades and credits
 - 📈 **CPI Calculator**: Calculate your Cumulative Performance Index across multiple semesters
-- 📱 **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
-- 🔍 **Detailed Results**: View comprehensive breakdown of grades and performance
-- 🔄 **Data Persistence**: Edit and update your entries as needed
-- 🔌 **Backend Integration**: Connects to a Spring Boot backend for data retrieval
+- 🔄 **Dynamic Form Support**: Add/remove semesters and subjects flexibly
+- 💾 **Data Persistence**: Store and retrieve data from a MongoDB backend
+- 📱 **Responsive UI**: Built with Tailwind CSS for full mobile and desktop support
+- ⚡ **Fast & Interactive**: React + Express + MongoDB architecture ensures performance
+
+---
 
 ## 🛠️ Technology Stack
 
-### Frontend
+### 🔷 Frontend
 - ⚛️ React.js
-- 📝 JavaScript/JSX
-- 🎨 CSS3 with responsive design
+- 🎨 Tailwind CSS
+- 📦 Axios for API calls
 - 🧩 React Icons
 
-### Backend
-- 🍃 Spring Boot
-- ☕ Java
+### 🟩 Backend
+- 🟢 Node.js + Express.js
+- 🍃 MongoDB + Mongoose
+- 🔐 CORS, dotenv for config management
 - 🌐 RESTful API architecture
+
+---
 
 ## 📋 Prerequisites
 
-- Node.js (v14.0.0 or higher)
-- npm (v6.0.0 or higher)
-- Java 11 or higher (for backend)
-- Maven (for backend)
+Make sure you have the following installed:
 
-## 🚀 Installation & Setup
+- Node.js (v14 or higher)
+- npm (v6 or higher)
+- MongoDB Atlas or local MongoDB instance
 
-### Frontend Setup
+---
+
+## 📦 Installation & Setup
+
+### 🔹 Clone the Repository
+
 ```bash
-# Clone the repository
 git clone https://github.com/trupal1211/SPIQuest.git
 cd SPIQuest
 
-# Install dependencies
-npm install
 
-# Start the development server
-npm run dev
